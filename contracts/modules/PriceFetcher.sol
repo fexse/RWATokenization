@@ -77,7 +77,6 @@ contract PriceFetcher is ModularInternal {
         require(_token1 != address(0), "Invalid token1 token address");
 
         _this = address(this);
-        _grantRole(ADMIN_ROLE, msg.sender);
 
         fexseToken = _fexseToken;
         token1 = _token1;
