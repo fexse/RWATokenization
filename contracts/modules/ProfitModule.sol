@@ -8,7 +8,6 @@ pragma solidity ^0.8.24;
  * - IERC20.sol: Interface for the ERC20 token standard.
  * - Strings.sol: Utility library for string operations.
  * - AssetToken.sol: Contract for asset token implementation.
- * - IRWATokenization.sol: Interface for RWATokenization.
  */
 import "../core/abstracts/ModularInternal.sol";
 import "../token/ERC20/IERC20.sol";
@@ -21,8 +20,6 @@ import "../utils/Strings.sol";
  */
 contract ProfitModule is ModularInternal {
     using AppStorage for AppStorage.Layout;
-
-    address public appAddress;
 
     // Event to log profit distribution
     event ProfitDistributed(uint256 assetId, uint256 ProfitInfoLength);
@@ -40,17 +37,13 @@ contract ProfitModule is ModularInternal {
 
     /**
      * @dev Constructor for the RWATokenization contract.
-     * @param _appAddress The address of the application to be granted the ADMIN_ROLE.
      *
      * This constructor initializes the contract by setting the contract's own address,
      * assigning the provided application address, and granting the ADMIN_ROLE to both
      * the deployer (msg.sender) and the provided application address (_appAddress).
      */
-    constructor(address _appAddress) {
+    constructor() {
         _this = address(this);
-        appAddress = _appAddress;
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, _appAddress);
     }
 
     /**
@@ -141,9 +134,7 @@ contract ProfitModule is ModularInternal {
      * @return The profit period of the specified asset.
      * @dev Reverts if the asset does not exist.
      */
-    function getProfitPeriod(
-        uint256 assetId
-    ) external view returns (uint256) {
+    function getProfitPeriod(uint256 assetId) external view returns (uint256) {
         AppStorage.Layout storage data = AppStorage.layout();
         Asset storage asset = data.assets[assetId];
 
@@ -200,6 +191,11 @@ contract ProfitModule is ModularInternal {
         uint256 assetId,
         uint256 newTokenLowerLimit
     ) public nonReentrant onlyRole(ADMIN_ROLE) {
+        require(
+            newTokenLowerLimit > 0,
+            "newTokenLowerLimit must be greater than zero"
+        );
+
         AppStorage.Layout storage data = AppStorage.layout();
         Asset storage asset = data.assets[assetId];
 
@@ -266,6 +262,16 @@ contract ProfitModule is ModularInternal {
             totalFexseAmount > 0,
             "Total FEXSE amount must be greater than zero"
         );
+
+        uint256 allowance = data.fexseToken.allowance(
+            data.deployer,
+            address(this)
+        );
+        require(
+            allowance >= totalFexseAmount,
+            "Insufficient allowance from deployer"
+        );
+
         data.fexseToken.transferFrom(
             data.deployer,
             msg.sender,
