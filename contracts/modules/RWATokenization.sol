@@ -49,16 +49,12 @@ contract RWATokenization is ModularInternal {
 
     /**
      * @dev Constructor for the RWATokenization contract.
-     * @param _appAddress The address of the application to be granted the ADMIN_ROLE.
-     *
      * This constructor initializes the contract by setting the contract's own address,
      * assigning the provided application address, and granting the ADMIN_ROLE to both
      * the deployer (msg.sender) and the provided application address (_appAddress).
      */
-    constructor(address _appAddress) {
+    constructor() {
         _this = address(this);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, _appAddress);
     }
 
     /**
@@ -69,7 +65,7 @@ contract RWATokenization is ModularInternal {
      */
     function moduleFacets() external view returns (FacetCut[] memory) {
         uint256 selectorIndex = 0;
-        bytes4[] memory selectors = new bytes4[](11);
+        bytes4[] memory selectors = new bytes4[](10);
 
         // Add function selectors to the array
         selectors[selectorIndex++] = this.createAsset.selector;
@@ -77,7 +73,6 @@ contract RWATokenization is ModularInternal {
         selectors[selectorIndex++] = this.getTokenPrice.selector;
         selectors[selectorIndex++] = this.getUri.selector;
         selectors[selectorIndex++] = this.getTokenContractAddress.selector;
-        selectors[selectorIndex++] = this.getTokenHolders.selector;
         selectors[selectorIndex++] = this.getHolderBalance.selector;
         selectors[selectorIndex++] = this.sendToTheRealWorld.selector;
         selectors[selectorIndex++] = this.updateAsset.selector;
@@ -222,22 +217,6 @@ contract RWATokenization is ModularInternal {
     }
 
     /**
-     * @notice Retrieves the list of token holders for a specific asset.
-     * @param assetId The ID of the asset for which to retrieve token holders.
-     * @return An array of addresses representing the token holders of the specified asset.
-     * @dev Reverts if the asset does not exist.
-     */
-    function getTokenHolders(
-        uint256 assetId
-    ) external view returns (address[] memory) {
-        AppStorage.Layout storage data = AppStorage.layout();
-        Asset storage asset = data.assets[assetId];
-
-        require(asset.id != 0, "Asset does not exist");
-        return asset.tokenHolders;
-    }
-
-    /**
      * @notice Retrieves the balance of a specific holder for a given asset.
      * @param assetId The ID of the asset.
      * @param holder The address of the holder whose balance is being queried.
@@ -268,6 +247,9 @@ contract RWATokenization is ModularInternal {
         uint256 assetId,
         uint256 newTokenPrice
     ) public nonReentrant onlyRole(ADMIN_ROLE) {
+
+        require(newTokenPrice > 0, "newTokenPrice must be greater than zero");
+
         AppStorage.Layout storage data = AppStorage.layout();
         Asset storage asset = data.assets[assetId];
 
@@ -329,77 +311,10 @@ contract RWATokenization is ModularInternal {
             return;
         }
 
-        // Check if balance is zero, remove holder
-        if (balance == 0 && currentBalance > 0) {
-            clearHolderData(assetId, account);
-        }
-        // If balance > 0 and not already a holder, add holder
-        else if (balance > 0 && currentBalance == 0) {
-            asset.tokenHolders.push(account);
-        }
-
         // Update holdings
         asset.userTokenInfo[account].holdings = balance;
 
         emit AssetHolderBalanceUpdated(account, assetId, balance);
-    }
-
-    /**
-     * @dev Internal function to remove a holder from the list of token holders for a specific asset.
-     * @param assetId The ID of the asset from which the holder will be removed.
-     * @param holder The address of the holder to be removed.
-     */
-    function _removeHolder(uint256 assetId, address holder) internal {
-        AppStorage.Layout storage data = AppStorage.layout();
-        Asset storage asset = data.assets[assetId];
-
-        uint256 length = asset.tokenHolders.length;
-
-        for (uint256 i = 0; i < length; i++) {
-            if (asset.tokenHolders[i] == holder) {
-                asset.tokenHolders[i] = asset.tokenHolders[length - 1];
-                asset.tokenHolders.pop();
-                break;
-            }
-        }
-    }
-
-    /**
-     * @dev Internal function to remove holdings of a specific asset for a given holder.
-     * @param assetId The ID of the asset from which holdings are to be removed.
-     * @param holder The address of the holder whose holdings are to be removed.
-     */
-    function _removeHoldings(uint256 assetId, address holder) internal {
-        AppStorage.Layout storage data = AppStorage.layout();
-        Asset storage asset = data.assets[assetId];
-
-        delete asset.userTokenInfo[holder].holdings;
-    }
-
-    /**
-     * @dev Internal function to remove pending profits for a specific asset holder.
-     * @param assetId The ID of the asset.
-     * @param holder The address of the asset holder.
-     */
-    function _removePendingProfits(uint256 assetId, address holder) internal {
-        AppStorage.Layout storage data = AppStorage.layout();
-        Asset storage asset = data.assets[assetId];
-
-        delete asset.userTokenInfo[holder].pendingProfits;
-    }
-
-    /**
-     * @dev Clears all data associated with a specific holder for a given asset.
-     * This includes removing the holder from the asset's holder list,
-     * removing their holdings, and removing any pending profits.
-     *
-     * @param assetId The ID of the asset for which the holder data is to be cleared.
-     * @param holder The address of the holder whose data is to be cleared.
-     */
-    function clearHolderData(uint256 assetId, address holder) internal {
-        _removeHolder(assetId, holder);
-        _removeHoldings(assetId, holder);
-        _removePendingProfits(assetId, holder);
     }
 
     /**
