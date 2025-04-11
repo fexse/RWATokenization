@@ -29,9 +29,6 @@ import {SafeERC20} from "../token/ERC20/utils/SafeERC20.sol";
 contract MarketPlace is ModularInternal {
     using AppStorage for AppStorage.Layout;
 
-    // Mapping to store assets by ID
-    mapping(uint256 => Asset) public assets;
-
     event TransferExecuted(
         uint256 orderId,
         address seller,
@@ -48,14 +45,11 @@ contract MarketPlace is ModularInternal {
     /**
      * @dev Constructor for the MarketPlace contract.
      * Grants the ADMIN_ROLE to the deployer of the contract and the specified appAddress.
-     *
-     * @param appAddress The address to be granted the ADMIN_ROLE.
      */
-    constructor(address appAddress, address _usdtToken) {
+    constructor(address _usdtToken) {
+        require(_usdtToken != address(0), "Invalid _usdtToken address");
         _this = address(this);
         usdtToken = _usdtToken;
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, appAddress);
     }
 
     /**
@@ -121,24 +115,26 @@ contract MarketPlace is ModularInternal {
         Asset storage asset = data.assets[assetId];
 
         uint256 amount = tokenPrice * tokenAmount;
-        uint256 servideFeeAmount = (amount * 5) / 1000;
+        uint256 serviceFeeAmount = (amount * 5) / 1000;
 
         require(
             IERC20(saleCurrency).allowance(buyer, address(this)) >=
-                (amount + servideFeeAmount),
-            "FEXSE allowance too low"
+                (amount + serviceFeeAmount),
+            "saleCurrency allowance too low"
         );
 
         require(
             IAssetToken(asset.tokenContract).isApprovedForAll(
                 seller,
                 address(this)
-            ) == true,
+            ),
             "asset is not approved"
         );
 
         require(
-            IERC20(saleCurrency).balanceOf(buyer) >= (amount + servideFeeAmount)
+            IERC20(saleCurrency).balanceOf(buyer) >=
+                (amount + serviceFeeAmount),
+            "not enough balance of buyer"
         );
 
         require(
@@ -151,7 +147,7 @@ contract MarketPlace is ModularInternal {
             IERC20(saleCurrency),
             buyer,
             seller,
-            (amount - servideFeeAmount)
+            (amount - serviceFeeAmount)
         );
 
         IAssetToken(asset.tokenContract).safeTransferFrom(
@@ -172,22 +168,22 @@ contract MarketPlace is ModularInternal {
             saleCurrency
         );
 
-        uint256 gasUsed = gasBefore - gasleft(); 
-        uint256 gasFee = calculateGasFee(saleCurrency, gasUsed);// approximate value of gas used in FEXSE tokens
+        uint256 gasUsed = gasBefore - gasleft();
+        uint256 gasFee = calculateGasFee(saleCurrency, gasUsed);
 
-        if (gasFee >= ((servideFeeAmount * 30) / 100)) {
+        if (gasFee >= ((serviceFeeAmount * 30) / 100)) {
             SafeERC20.safeTransferFrom(
                 IERC20(saleCurrency),
                 buyer,
                 address(this),
-                (servideFeeAmount * 2) + gasFee
+                (serviceFeeAmount * 2) + gasFee
             );
         } else {
             SafeERC20.safeTransferFrom(
                 IERC20(saleCurrency),
                 buyer,
                 address(this),
-                servideFeeAmount * 2
+                serviceFeeAmount * 2
             );
         }
     }
@@ -202,7 +198,7 @@ contract MarketPlace is ModularInternal {
         uint256 gasUsed
     ) public view returns (uint256) {
         if (gasUsed == 0) return 0;
-        
+
         uint256 gasPriceinUSDT = IPriceFetcher(address(this)).getGasPriceInUSDT(
             gasUsed
         );
@@ -215,7 +211,6 @@ contract MarketPlace is ModularInternal {
         }
     }
 
-   
     /**
      * @dev Validates the parameters for a token transfer.
      * @param seller The address of the seller.
@@ -254,22 +249,30 @@ contract MarketPlace is ModularInternal {
         AppStorage.Layout storage data = AppStorage.layout();
         Asset storage asset = data.assets[assetId];
 
-        // Fiyat aralığı kontrolü
-        uint256 minPrice = (asset.tokenPrice * 80) / 100;
-        uint256 maxPrice = (asset.tokenPrice * 120) / 100;
+        uint256 price;
+
+        if (saleCurrency == usdtToken) {
+            price = asset.tokenPrice;
+        } else {
+            price = ((asset.tokenPrice * 10 ** 18) / (45 * 10 ** 3));
+        }
+
+        //
+        uint256 minPrice = (price * 80) / 100;
+        uint256 maxPrice = (price * 120) / 100;
         require(
             tokenPrice >= minPrice && tokenPrice <= maxPrice,
             "Token price out of allowed range"
         );
 
-        // Geçerli para birimi kontrolü
+        //
         require(
             saleCurrency == usdtToken ||
                 saleCurrency == address(data.fexseToken),
             "Invalid sale currency"
         );
 
-        // Kara liste kontrolü
+        //
         require(!data.isBlacklisted[seller], "Seller is blacklisted");
         require(!data.isBlacklisted[buyer], "Buyer is blacklisted");
     }
