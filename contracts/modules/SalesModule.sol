@@ -32,13 +32,6 @@ contract SalesModule is ModularInternal {
 
     address public immutable usdtToken;
 
-    // Event to log profit distribution
-    event TokensSold(
-        uint256 assetId,
-        address buyer,
-        uint256 totalTokens,
-        uint256 tokenPrice
-    );
     address immutable _this;
 
     /**
@@ -46,8 +39,8 @@ contract SalesModule is ModularInternal {
      * Sets the contract's address to `_this` and grants the `ADMIN_ROLE` to the deployer of the contract.
      */
     constructor(address _usdtToken) {
+        require(_usdtToken != address(0), "Invalid _usdtToken address");
         _this = address(this);
-        _grantRole(ADMIN_ROLE, msg.sender);
         usdtToken = _usdtToken;
     }
 
