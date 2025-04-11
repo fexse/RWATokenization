@@ -25,15 +25,9 @@ contract Compliance is ModularInternal {
     /**
      * @dev Constructor for the Compliance contract.
      * Grants the ADMIN_ROLE and COMPLIANCE_OFFICER_ROLE to the deployer and the specified appAddress.
-     *
-     * @param appAddress The address to be granted the ADMIN_ROLE and COMPLIANCE_OFFICER_ROLE.
      */
-    constructor(address appAddress) {
+    constructor() {
         _this = address(this);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(COMPLIANCE_OFFICER_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, appAddress);
-        _grantRole(COMPLIANCE_OFFICER_ROLE, appAddress);
     }
 
     /**
@@ -130,8 +124,6 @@ contract Compliance is ModularInternal {
 
         require(!data.isBlacklisted[from], "Sender address is blacklisted");
         require(!data.isBlacklisted[to], "Recipient address is blacklisted");
-        require(data.isWhitelisted[from], "Sender is not whitelisted");
-        require(data.isWhitelisted[to], "Recipient is not whitelisted");
     }
 
     /**
