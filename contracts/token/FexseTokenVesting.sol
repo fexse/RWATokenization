@@ -88,8 +88,8 @@ contract FexseTokenVesting is AccessControl, ReentrancyGuard {
         _createVestingSchedule(
             VestingCategory.DEVELOPMENT_RND,
             270_000_000 * 10**18,  
-            12,                     
-            24,                    
+            0,                     
+            60,                    
             _startTime
         );
 
