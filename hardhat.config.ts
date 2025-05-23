@@ -6,7 +6,7 @@ import "@typechain/hardhat";
 import * as dotenv from "dotenv";
 import path from "path";
 
-// .env dosyasındaki değerleri içe aktarır
+// Imports values from the .env file
 dotenv.config();
 
 const RPC_URL = process.env.RPC_URL || "";
@@ -28,8 +28,8 @@ const config: HardhatUserConfig = {
     },
   },
   // typechain: {
-  //   outDir: "typechain", // Oluşturulacak tür dosyalarının klasörü
-  //   target: "ethers-v5", // Ethers.js için türleri oluştur
+  //   outDir: "typechain", // Folder of type files to be created
+  //   target: "ethers-v5", // Create types for Ethers.js
   // },
   defaultNetwork: "hardhat",
   networks: {
