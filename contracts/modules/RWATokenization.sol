@@ -306,7 +306,7 @@ contract RWATokenization is ModularInternal {
 
         uint256 currentBalance = asset.userTokenInfo[account].holdings;
 
-        // Eğer balance değişmemişse işlemi atla
+        // If balance has not change , skip the operation
         if (currentBalance == balance) {
             return;
         }
