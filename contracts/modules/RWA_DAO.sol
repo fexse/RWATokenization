@@ -44,14 +44,14 @@ contract RWA_DAO is ModularInternal {
      * Initializes the contract by setting the `_appAddress`, storing the contract's own address,
      * and granting the `ADMIN_ROLE` to both the deployer and the `_appAddress`.
      */
-    constructor(address _appAddress) {
-        require(_appAddress != address(0), "Invalid RWA contract address");
+    //this is a constructor
+    constructor() {
         _this = address(this);
         appAddress = _appAddress;
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, _appAddress);
     }
-
+    
     /**
      * @dev Returns an array of ⁠ FacetCut ⁠ structs, which define the functions (selectors)
      *      provided by this module. This is used to register the module's functions
